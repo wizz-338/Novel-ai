@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+output/
+.env
+*.log
+references/*.png
+references/*.jpg
+references/*.webp
