@@ -1,0 +1,56 @@
+name: NovelAI V4.5 - owner initiated, one image
+
+on:
+  workflow_dispatch:
+    inputs:
+      scene_json:
+        description: 'One JSON object. dry_run defaults to true.'
+        required: true
+        type: string
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: novelai-owner-only
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    # Never give secrets to untrusted issue authors.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner)
+      ||
+      (github.event_name == 'issues' && github.actor == github.repository_owner
+       && github.event.issue.user.login == github.repository_owner
+       && startsWith(github.event.issue.title, '[NAI] '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted default-branch code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Run security and payload unit tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Perform a single human-initiated request
+        env:
+          NOVELAI_API_TOKEN: ${{ secrets.NOVELAI_API_TOKEN }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: >-
+          python3 novelai_bridge.py
+          --event-path "$GITHUB_EVENT_PATH"
+          --event-name "$GITHUB_EVENT_NAME"
+          --out output
+      - name: Upload result for human review
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novelai-${{ github.run_id }}
+          path: output/
+          retention-days: 3
+          if-no-files-found: error
