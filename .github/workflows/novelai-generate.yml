@@ -36,6 +36,29 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
       - name: Run security and payload unit tests
         run: python3 -m unittest discover -s tests -v
+      - name: Prepare approved Moon Nari reference
+        run: |
+          python3 -m pip install --quiet 'Pillow==11.3.0'
+          python3 - <<'PY'
+          from pathlib import Path
+          from urllib.request import urlopen
+          from PIL import Image, ImageOps
+          import io
+          url = 'https://v3b.fal.media/files/b/0ab3a492/o13HbdFy4SSgFX8rn_qWK_5871.png'
+          with urlopen(url, timeout=30) as response:
+              source = response.read(10 * 1024 * 1024 + 1)
+          if len(source) > 10 * 1024 * 1024:
+              raise ValueError('Reference exceeds download limit')
+          with Image.open(io.BytesIO(source)) as original:
+              if original.format != 'PNG' or original.size != (832, 1216):
+                  raise ValueError('Unexpected Moon Nari reference image')
+              rgb = original.convert('RGB')
+              fitted = ImageOps.pad(rgb, (1024, 1536), method=Image.Resampling.LANCZOS, color='white')
+              output = Path('references/nari.png')
+              output.parent.mkdir(parents=True, exist_ok=True)
+              fitted.save(output, format='PNG', optimize=True)
+          print('Approved reference prepared at 1024x1536')
+          PY
       - name: Perform a single human-initiated request
         env:
           NOVELAI_API_TOKEN: ${{ secrets.NOVELAI_API_TOKEN }}
