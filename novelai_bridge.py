@@ -16,9 +16,10 @@ API_URL = "https://image.novelai.net/ai/generate-image"
 MODEL = "nai-diffusion-4-5-full"
 ROOT = Path(__file__).resolve().parent
 MAX_RESPONSE = 30 * 1024 * 1024
-NEGATIVE = ("chibi, oversized head, oversized eyes, glossy plastic skin, shiny hair, "
-            "exaggerated smile, excessive blush, childlike anatomy, distorted body, "
-            "extra fingers, bad hands, watermark, text, signature")
+NEGATIVE = ("low quality, blurry, extra fingers, bad hands, extra limbs, "
+            "distorted anatomy, watermark, text, signature")
+REFERENCE_STRENGTH = 0.80
+REFERENCE_FIDELITY = 0.80
 
 
 class BridgeError(ValueError):
@@ -114,8 +115,8 @@ def build_payload(scene, root=ROOT):
             "director_reference_images": [base64.b64encode(image).decode("ascii")],
             "director_reference_descriptions": [{"caption": {
                 "base_caption": "character&style", "char_captions": []}}],
-            "director_reference_strength_values": [0.65],
-            "director_reference_secondary_strength_values": [0.35],
+            "director_reference_strength_values": [REFERENCE_STRENGTH],
+            "director_reference_secondary_strength_values": [REFERENCE_FIDELITY],
             "director_reference_information_extracted": [1.0],
         })
     return {"action": "generate", "model": MODEL,
